@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- LA CAPA DE ADENTRO: entidades, excepciones de dominio y los contratos
+       (interfaces) de los repositorios.
+
+       Fíjese en que NO tiene ni una sola referencia: ni a otro proyecto ni a
+       un paquete. Eso no es un descuido, es la regla de la arquitectura — el
+       dominio no sabe que existen HTTP, SQL Server ni Dapper. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

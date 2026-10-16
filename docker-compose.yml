@@ -46,7 +46,7 @@ services:
     environment:
       - MSSQL_SA_PASSWORD=Aplicacionweb123!
     volumes:
-      - ./db:/scripts:ro
+      - ./GestionProfesoral-Backend/db:/scripts:ro
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -54,15 +54,25 @@ services:
 
   # --- La API: C# / ASP.NET Core, con el código montado y dotnet watch ---
   api-gestion:
-    build: ./api_gestion
+    build: ./GestionProfesoral-Backend
     container_name: gestion-api
     restart: unless-stopped
     ports:
       - "8074:8074"                # el MISMO número adentro y afuera
     volumes:
-      - ./api_gestion:/app         # el código montado: guardar un .cs recompila solo
-      - /app/bin                   # bin y obj quedan DENTRO del contenedor (Linux),
-      - /app/obj                   #   sin mezclarse con los compilados de Windows
+      - ./GestionProfesoral-Backend:/app   # el código montado: guardar un .cs recompila solo
+      # bin y obj de CADA proyecto quedan DENTRO del contenedor (Linux), sin
+      # mezclarse con los compilados de Windows
+      - /app/src/GestionProfesoral.Api/bin
+      - /app/src/GestionProfesoral.Api/obj
+      - /app/src/GestionProfesoral.Application/bin
+      - /app/src/GestionProfesoral.Application/obj
+      - /app/src/GestionProfesoral.Domain/bin
+      - /app/src/GestionProfesoral.Domain/obj
+      - /app/src/GestionProfesoral.Infrastructure/bin
+      - /app/src/GestionProfesoral.Infrastructure/obj
+      - /app/tests/GestionProfesoral.Tests/bin
+      - /app/tests/GestionProfesoral.Tests/obj
     environment:
       # El host es el NOMBRE del servicio. El doble guion bajo hace que ASP.NET
       # lea esto como ConnectionStrings:SqlServer y SOBREESCRIBA appsettings.json.
@@ -73,13 +83,13 @@ services:
 
   # --- EL FRONT: Blazor Server, un TERCER proceso ---
   front-blazor:
-    build: ./front_blazor
+    build: ./GestionProfesoral-Frontend
     container_name: gestion-front
     restart: unless-stopped
     ports:
       - "8075:8075"                # http://localhost:8075
     volumes:
-      - ./front_blazor:/app        # el código montado: guardar un .razor recompila solo
+      - ./GestionProfesoral-Frontend:/app  # el código montado: guardar un .razor recompila solo
       - /app/bin                   # bin y obj quedan DENTRO del contenedor
       - /app/obj
     environment:

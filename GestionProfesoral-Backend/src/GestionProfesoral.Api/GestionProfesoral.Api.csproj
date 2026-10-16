@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- CAPA 1 — HTTP.
+
+       Referencia a Application (para llamar al negocio) y a Infrastructure,
+       pero SOLO para registrar las implementaciones en Program.cs. Ningún
+       controlador nombra una clase de Infrastructure. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GestionProfesoral.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestionProfesoral.Application\GestionProfesoral.Application.csproj" />
+    <ProjectReference Include="..\GestionProfesoral.Infrastructure\GestionProfesoral.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

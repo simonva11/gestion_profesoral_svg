@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- LA PRUEBA DE CAPAS.
+
+       Referencia a Application y a Domain, y NO a Infrastructure: por eso
+       corre sin base de datos. Si el servicio necesitara SQL Server, este
+       proyecto no compilaría — y esa es la demostración. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GestionProfesoral.Application\GestionProfesoral.Application.csproj" />
+    <ProjectReference Include="..\..\src\GestionProfesoral.Domain\GestionProfesoral.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

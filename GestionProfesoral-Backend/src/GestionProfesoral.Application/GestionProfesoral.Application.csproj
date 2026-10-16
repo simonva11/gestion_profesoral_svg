@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- CAPA 2 — las reglas de negocio.
+
+       Referencia SOLO al dominio. No referencia a Infrastructure, y por eso
+       el servicio no puede nombrar a SQL Server aunque alguien lo intente:
+       no compilaría. Esa es la diferencia entre una capa y una carpeta. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestionProfesoral.Domain\GestionProfesoral.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
