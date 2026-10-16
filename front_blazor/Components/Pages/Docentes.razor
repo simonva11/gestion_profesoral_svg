@@ -1,0 +1,365 @@
+@page "/docentes"
+@rendermode InteractiveServer
+@inject ServicioDocente Servicio
+
+@*
+    ==================================================================
+    LA PANTALLA DE `docente` — fase 1 de la versión 2
+    ==================================================================
+
+    Lo que esta pantalla tiene que demostrar, y no es decorado:
+
+      · CRITERIO 5 — la clave foránea NO se digita: se elige de un
+        desplegable CARGADO DESDE LA API, que muestra el nombre de la línea
+        y manda su código.
+      · CRITERIO 6 — como la clave foránea es opcional, el desplegable trae
+        «(ninguna)», que manda null — no cadena vacía, no cero.
+      · CRITERIO 10 — un docente retirado desaparece de la lista y sigue en
+        la base.
+      · CRITERIO 11 — aquí no se dice «PUT», ni «422», ni «FK». Los botones
+        se llaman como piensa el coordinador.
+
+    Y el 409 de la regla D2 llega como una frase: «todavía tiene 2 registros
+    activos». La pantalla no lo interpreta, lo muestra.
+*@
+
+<PageTitle>Docentes</PageTitle>
+
+<div class="encabezado">
+    <div>
+        <h1>Docentes</h1>
+        <p class="nota">
+            Las hojas de vida del profesorado. Un docente retirado deja de aparecer aquí, pero no se borra:
+            sus estudios, evaluaciones y reconocimientos se conservan.
+        </p>
+    </div>
+    @if (!mostrandoFormulario)
+    {
+        <button class="boton primario" @onclick="Agregar">Agregar</button>
+    }
+</div>
+
+@* ─────────── LOS AVISOS ─────────── *@
+@foreach (var error in errores)
+{
+    <p class="aviso error">@error</p>
+}
+@if (!string.IsNullOrEmpty(exito))
+{
+    <p class="aviso exito">@exito</p>
+}
+
+@* ─────────── EL FORMULARIO ─────────── *@
+@if (mostrandoFormulario)
+{
+    <div class="tarjeta-formulario">
+        <h2>@(editando ? "Editar el docente" : "Agregar el docente")</h2>
+
+        <label>
+            Cédula
+            <input type="number" @bind="campoCedula" disabled="@editando" />
+            @if (editando)
+            {
+                <span class="ayuda">
+                    La cédula identifica la hoja de vida y no se cambia. Si está mal, se agrega otra y se retira esta.
+                </span>
+            }
+        </label>
+
+        <label>Nombres <input @bind="campoNombres" maxlength="60" /></label>
+        <label>Apellidos <input @bind="campoApellidos" maxlength="60" /></label>
+        <label>Género <input @bind="campoGenero" maxlength="12" /></label>
+        <label>Cargo <input @bind="campoCargo" maxlength="30" /></label>
+        <label>Fecha de nacimiento <input type="date" @bind="campoFechaNacimiento" /></label>
+        <label>Correo <input type="email" @bind="campoCorreo" maxlength="70" /></label>
+        <label>Teléfono <input @bind="campoTelefono" maxlength="20" /></label>
+        <label>Hoja de vida (CvLAC) <input @bind="campoUrlCvlac" maxlength="128" /></label>
+        <label>Fecha de actualización <input type="date" @bind="campoFechaActualizacion" /></label>
+        <label>Escalafón <input @bind="campoEscalafon" maxlength="45" /></label>
+        <label>Perfil <textarea @bind="campoPerfil" rows="3"></textarea></label>
+        <label>Categoría MinCiencias <input @bind="campoCatMinciencia" maxlength="45" /></label>
+        <label>Convocatoria MinCiencias <input @bind="campoConvMinciencia" maxlength="45" /></label>
+        <label>Nacionalidad <input @bind="campoNacionalidaad" maxlength="45" /></label>
+
+        @*
+            ──────────────────────────────────────────────────────────────
+            EL DESPLEGABLE DE LA CLAVE FORÁNEA — el corazón del criterio 5
+            ──────────────────────────────────────────────────────────────
+            Lo que la persona VE:    el nombre de la línea
+            Lo que se MANDA:         el id
+            De dónde salen opciones: GET /api/linea-investigacion (solo activas)
+
+            La opción vacía manda null, no cadena vacía: una cadena vacía donde
+            va un número hace que el servidor responda un error de conversión
+            en inglés, en vez de aceptar que no hay valor.
+        *@
+        <label>
+            Línea de investigación principal
+            <select @bind="campoLinea">
+                <option value="">— (ninguna) —</option>
+                @foreach (var linea in lineas)
+                {
+                    <option value="@linea.Id">@linea.Nombre</option>
+                }
+            </select>
+            @if (lineas.Count == 0)
+            {
+                <span class="ayuda">
+                    No hay líneas de investigación registradas todavía. Puede dejar «(ninguna)».
+                </span>
+            }
+        </label>
+
+        <div class="acciones">
+            <button class="boton primario" @onclick="Guardar" disabled="@guardando">
+                @(guardando ? "Guardando…" : "Guardar")
+            </button>
+            <button class="boton" @onclick="Cancelar" disabled="@guardando">Cancelar</button>
+        </div>
+    </div>
+}
+
+@* ─────────── LA TABLA ─────────── *@
+@if (cargando)
+{
+    <p class="nota">Cargando…</p>
+}
+else if (docentes.Count == 0)
+{
+    @* El 204 del contrato: «no hay ninguno» no es un error, y se dice así *@
+    <div class="vacio">
+        <p>Todavía no hay docentes registrados.</p>
+        <p class="nota">Use el botón «Agregar» para registrar el primero.</p>
+    </div>
+}
+else
+{
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Cédula</th>
+                <th>Nombre</th>
+                <th>Cargo</th>
+                <th>Escalafón</th>
+                <th>Línea principal</th>
+                <th>Estudios</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var d in docentes)
+            {
+                <tr>
+                    <td>@d.Cedula</td>
+                    <td>@d.Nombres @d.Apellidos</td>
+                    <td>@d.Cargo</td>
+                    <td>@d.Escalafon</td>
+                    <td>
+                        @* También en la TABLA se muestra el nombre, no el código:
+                           la persona reconoce nombres, la base necesita claves *@
+                        @(NombreDeLinea(d.LineaInvestigacionPrincipal))
+                    </td>
+                    <td>
+                        @* Este número lo escribió el DISPARADOR, no la API.
+                           Es la evidencia visible del criterio 4 *@
+                        @d.TotalEstudios
+                    </td>
+                    <td class="acciones-fila">
+                        <button class="boton" @onclick="() => Editar(d)">Editar</button>
+                        <button class="boton peligro" @onclick="() => Retirar(d)">Retirar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Docente> docentes = new();
+    private List<LineaInvestigacion> lineas = new();
+
+    private List<string> errores = new();
+    private string exito = string.Empty;
+
+    private bool cargando = true;
+    private bool guardando = false;
+    private bool mostrandoFormulario = false;
+    private bool editando = false;
+
+    // Los campos del formulario. Son del FRONT: se llenan desde la pantalla y
+    // se vuelcan a un Docente solo al guardar.
+    private int campoCedula;
+    private string campoNombres = string.Empty;
+    private string campoApellidos = string.Empty;
+    private string campoGenero = string.Empty;
+    private string campoCargo = string.Empty;
+    private DateTime? campoFechaNacimiento;
+    private string campoCorreo = string.Empty;
+    private string campoTelefono = string.Empty;
+    private string campoUrlCvlac = string.Empty;
+    private DateTime? campoFechaActualizacion = DateTime.Today;
+    private string campoEscalafon = string.Empty;
+    private string campoPerfil = string.Empty;
+    private string campoCatMinciencia = string.Empty;
+    private string campoConvMinciencia = string.Empty;
+    private string campoNacionalidaad = string.Empty;
+
+    // Es STRING y no int?: el <select> maneja texto, y la cadena vacía es la
+    // opción «(ninguna)». Se convierte a null al guardar, en un solo sitio.
+    private string campoLinea = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        errores.Clear();
+
+        var r = await Servicio.Listar();
+        if (r.Ok) docentes = r.Datos!;
+        else errores = r.Errores;
+
+        // Las opciones del desplegable se cargan SIEMPRE, no solo al abrir el
+        // formulario: también hacen falta para mostrar el nombre de la línea
+        // en la tabla.
+        var rl = await Servicio.ListarLineas();
+        if (rl.Ok) lineas = rl.Datos!;
+
+        cargando = false;
+    }
+
+    private string NombreDeLinea(int? id)
+    {
+        if (id == null) return "(ninguna)";
+        return lineas.FirstOrDefault(l => l.Id == id)?.Nombre ?? $"Línea {id}";
+    }
+
+    private void Agregar()
+    {
+        Limpiar();
+        editando = false;
+        mostrandoFormulario = true;
+    }
+
+    private void Editar(Docente d)
+    {
+        campoCedula = d.Cedula;
+        campoNombres = d.Nombres;
+        campoApellidos = d.Apellidos;
+        campoGenero = d.Genero;
+        campoCargo = d.Cargo;
+        campoFechaNacimiento = d.FechaNacimiento.ToDateTime(TimeOnly.MinValue);
+        campoCorreo = d.Correo;
+        campoTelefono = d.Telefono;
+        campoUrlCvlac = d.UrlCvlac;
+        campoFechaActualizacion = d.FechaActualizacion.ToDateTime(TimeOnly.MinValue);
+        campoEscalafon = d.Escalafon;
+        campoPerfil = d.Perfil;
+        campoCatMinciencia = d.CatMinciencia ?? string.Empty;
+        campoConvMinciencia = d.ConvMinciencia;
+        campoNacionalidaad = d.Nacionalidaad;
+        campoLinea = d.LineaInvestigacionPrincipal?.ToString() ?? string.Empty;
+
+        editando = true;
+        mostrandoFormulario = true;
+        errores.Clear();
+        exito = string.Empty;
+    }
+
+    private async Task Guardar()
+    {
+        guardando = true;
+        errores.Clear();
+        exito = string.Empty;
+
+        var docente = new Docente
+        {
+            Cedula = campoCedula,
+            Nombres = campoNombres,
+            Apellidos = campoApellidos,
+            Genero = campoGenero,
+            Cargo = campoCargo,
+            FechaNacimiento = DateOnly.FromDateTime(campoFechaNacimiento ?? DateTime.Today),
+            Correo = campoCorreo,
+            Telefono = campoTelefono,
+            UrlCvlac = campoUrlCvlac,
+            FechaActualizacion = DateOnly.FromDateTime(campoFechaActualizacion ?? DateTime.Today),
+            Escalafon = campoEscalafon,
+            Perfil = campoPerfil,
+            CatMinciencia = string.IsNullOrWhiteSpace(campoCatMinciencia) ? null : campoCatMinciencia,
+            ConvMinciencia = campoConvMinciencia,
+            Nacionalidaad = campoNacionalidaad,
+
+            // AQUÍ, EN UNA LÍNEA, EL CRITERIO 6: la cadena vacía del
+            // desplegable se convierte en null, que es lo que la base entiende
+            // por «no tiene línea». Mandar "" haría que el servidor contestara
+            // un error de conversión en inglés.
+            LineaInvestigacionPrincipal = string.IsNullOrEmpty(campoLinea)
+                ? null
+                : int.Parse(campoLinea)
+        };
+
+        var r = editando
+            ? await Servicio.Reemplazar(campoCedula, docente)
+            : await Servicio.Crear(docente);
+
+        if (r.Ok)
+        {
+            exito = editando ? "Los cambios quedaron guardados." : "El docente quedó registrado.";
+            mostrandoFormulario = false;
+            await Cargar();
+        }
+        else
+        {
+            // Aquí aterrizan el 422 (una frase por campo) y el 409 (la cédula
+            // repetida o la línea inexistente), ya en castellano.
+            errores = r.Errores;
+        }
+
+        guardando = false;
+    }
+
+    private async Task Retirar(Docente d)
+    {
+        errores.Clear();
+        exito = string.Empty;
+
+        var r = await Servicio.Retirar(d.Cedula);
+
+        if (r.Ok)
+        {
+            exito = $"{d.Nombres} {d.Apellidos} quedó retirado. Su información se conserva.";
+            await Cargar();
+        }
+        else
+        {
+            // El 409 de la regla D2 llega aquí tal como lo escribió el
+            // servicio: «todavía tiene 2 registros activos…». No hace falta
+            // interpretarlo, hace falta mostrarlo.
+            errores = r.Errores;
+        }
+    }
+
+    private void Cancelar()
+    {
+        mostrandoFormulario = false;
+        errores.Clear();
+        Limpiar();
+    }
+
+    private void Limpiar()
+    {
+        campoCedula = 0;
+        campoNombres = campoApellidos = campoGenero = campoCargo = string.Empty;
+        campoCorreo = campoTelefono = campoUrlCvlac = string.Empty;
+        campoEscalafon = campoPerfil = string.Empty;
+        campoCatMinciencia = campoConvMinciencia = campoNacionalidaad = string.Empty;
+        campoFechaNacimiento = null;
+        campoFechaActualizacion = DateTime.Today;
+        campoLinea = string.Empty;     // arranca en «(ninguna)»
+        exito = string.Empty;
+    }
+}
