@@ -1,0 +1,340 @@
+{
+  "info": {
+    "name": "Gestión Profesoral — v1 · programa",
+    "description": "Los 7 endpoints de la versión 1, en orden didáctico.\n\nAntes de empezar: `docker compose up -d --build`.\n\nLa tabla arranca VACÍA: la petición 2 responde 204. Córrala otra vez después de la 12 y volverá a dar 204.\n\nLas peticiones 7 y 8 son la pareja que enseña la diferencia entre reemplazar y actualizar: el MISMO cuerpo responde 422 en PUT y 200 en PATCH.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base",
+      "value": "http://localhost:8074"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Diagnóstico",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            ""
+          ]
+        },
+        "description": "RF7 — si no responde, la API no está arriba."
+      }
+    },
+    {
+      "name": "2. Listar (vacío → 204)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/api/programa",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa"
+          ]
+        },
+        "description": "RF1 — el estado inicial: no hay programas."
+      }
+    },
+    {
+      "name": "3. Crear",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/programa",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa"
+          ]
+        },
+        "description": "RF3 — diez obligatorios y fechaCierre opcional. Esperado: 200.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 9001,\n  \"nombre\": \"Ingeniería de Sistemas\",\n  \"tipo\": \"Pregrado\",\n  \"nivel\": \"Profesional\",\n  \"fechaCreacion\": \"2005-01-15\",\n  \"fechaCierre\": null,\n  \"numeroCohortes\": \"40\",\n  \"cantGraduados\": \"1250\",\n  \"fechaActualizacion\": \"2026-01-30\",\n  \"ciudad\": \"Medellín\",\n  \"facultad\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "4. Listar (ahora → 200)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/api/programa",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa"
+          ]
+        },
+        "description": "RF1 — el sobre trae total: 1."
+      }
+    },
+    {
+      "name": "5. Obtener por código",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/api/programa/9001",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "9001"
+          ]
+        },
+        "description": "RF2 — esperado: 200."
+      }
+    },
+    {
+      "name": "6. Obtener uno que no existe",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/api/programa/999999",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "999999"
+          ]
+        },
+        "description": "RF2 — esperado: 404."
+      }
+    },
+    {
+      "name": "7. PUT sin 'nivel' → 422",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/programa/9001",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "9001"
+          ]
+        },
+        "description": "Mitad de la pareja: reemplazar exige TODO. Esperado: 422 con errores[].",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ingeniería de Sistemas\",\n  \"tipo\": \"Pregrado\",\n  \"fechaCreacion\": \"2005-01-15\",\n  \"fechaCierre\": null,\n  \"numeroCohortes\": \"40\",\n  \"cantGraduados\": \"1250\",\n  \"fechaActualizacion\": \"2026-01-30\",\n  \"ciudad\": \"Medellín\",\n  \"facultad\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "8. PATCH con el MISMO cuerpo → 200",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/programa/9001",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "9001"
+          ]
+        },
+        "description": "La otra mitad: actualizar se conforma con lo enviado. Compare con la 7.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ingeniería de Sistemas\",\n  \"tipo\": \"Pregrado\",\n  \"fechaCreacion\": \"2005-01-15\",\n  \"fechaCierre\": null,\n  \"numeroCohortes\": \"40\",\n  \"cantGraduados\": \"1250\",\n  \"fechaActualizacion\": \"2026-01-30\",\n  \"ciudad\": \"Medellín\",\n  \"facultad\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "9. PATCH parcial",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/programa/9001",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "9001"
+          ]
+        },
+        "description": "RF5 — solo lo que cambia.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ciudad\": \"Bogotá\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "10. PATCH vacío → 400",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/programa/9001",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "9001"
+          ]
+        },
+        "description": "RF5 — actualizar sin decir qué es regla de negocio rota. Esperado: 400, no 404.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11. Crear sin los obligatorios → 422",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/programa",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa"
+          ]
+        },
+        "description": "La validación es la frontera: no llega a la base.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 9002,\n  \"nombre\": \"X\",\n  \"tipo\": \"Y\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "12. Eliminar (lógico)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/api/programa/9001",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "9001"
+          ]
+        },
+        "description": "RF6 — marca activo = 0. Vuelva a correr la petición 2: responde 204 otra vez."
+      }
+    },
+    {
+      "name": "13. Eliminar otra vez → 404",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/api/programa/9001",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "programa",
+            "9001"
+          ]
+        },
+        "description": "C9 — para la API ya no existe."
+      }
+    }
+  ]
+}

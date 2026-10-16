@@ -1,0 +1,298 @@
+# Constitución del proyecto — Módulo Gestión Profesoral
+
+> **Documento permanente.** Estas reglas rigen TODAS las versiones del
+> proyecto. Cada versión tiene además su propia especificación en
+> [versiones/](versiones/0_mapa_versiones.md); ante conflicto, la
+> constitución gana.
+>
+> Este proyecto es el **ejemplo de referencia** del módulo Gestión Profesoral
+> de los proyectos de aula. El QUÉ del módulo está en
+> [modulo_gestion_profesoral.md](../../ProyectosDeAula/docs/modulo_gestion_profesoral.md)
+> y el CÓMO se trabaja, en
+> [0_METODOLOGIA.md](../../ProyectosDeAula/docs/0_METODOLOGIA.md).
+
+---
+
+## Artículo 1 — El proyecto se construye POR VERSIONES y la especificación manda
+
+- El sistema crece por **versiones incrementales** (v1, v2, …), cada una
+  con su spec kit propio. Una versión está TERMINADA solo cuando pasa sus
+  criterios de aceptación; entonces se hace commit, **tag** (`v1`, `v2`…)
+  y solo después se escribe la spec de la siguiente.
+- **No se anticipa** (**YAGNI**, *You Aren't Gonna Need It* — "no lo vas a
+  necesitar"): nada de JWT en la v1, ni dashboard en la v2, ni tablas de
+  más antes de la versión que las pida. El código de cada versión solo
+  puede nombrar lo que su spec nombra.
+- **Cerrado es cerrado:** una versión con tag no se reabre; los ajustes van
+  a la siguiente.
+- Si el código hace algo que la spec no dice, sobra; si la spec pide algo
+  que el código no hace, falta.
+
+## Artículo 1.1 — Una versión incluye SU FRONT
+
+**Cada versión entrega su parte de la API *y* su parte del front.** No hay una
+versión «de back» y otra «de front».
+
+> **La regla operativa: una versión NO está cerrada si la API responde y la
+> pantalla no.** Media versión no es una versión.
+
+### Por qué
+
+| | |
+|---|---|
+| **Lo terminado se le puede mostrar a alguien** | Una versión que solo trae endpoints se sustenta con Swagger. Una que trae pantallas se le muestra a quien la pidió |
+| **El contrato se ejercita de inmediato** | Uno descubre que el JSON es incómodo **cuando le toca pintarlo**. Si el front llega tres versiones después, el contrato lleva tres versiones equivocado |
+| **No hay front de golpe al final** | Es el error que se paga caro: seis entidades de API esperando un front que nace con una sola, y una versión entera dedicada a que se alcancen |
+| **Es lo que pide el curso** | `0_METODOLOGIA.md` §2, textual: *«v1 — CRUD de las tablas sin FK del módulo — **API REST + Frontend funcionando**»* |
+
+Y lo que cuesta, que también hay que decirlo: **cada versión es el doble de
+grande** y cada compuerta revisa dos stacks. Se compensa recortando el alcance:
+esta v1 toma **una** tabla, no dieciséis.
+
+### El front es un TERCER PROCESO
+
+**Blazor Server**, en su propio proyecto y en su propio contenedor, hablando
+con la API **solo por HTTP**. Tres cosas que se comprueban, no que se prometen:
+
+1. Su `FrontGestion.csproj` **no tiene ningún paquete de acceso a
+   datos**.
+2. Su servicio en el compose **no depende de `sqlserver`** ni recibe su
+   cadena de conexión.
+3. Y la prueba: **apagando la API, la pantalla sigue en pie**, con su aviso y
+   **sin un solo dato**. Es la sección 5 de `pruebas_humo/humo_front.py`.
+
+### Y no comparte código con la API, aunque los dos estén en C#
+
+Se podría referenciar el proyecto de la API y usar sus clases: `Programa` existe en
+los dos lados, con los mismos campos. **No se hace.** El front tiene la suya,
+que se parece a la de la API porque el contrato es el mismo — no porque sea la
+misma.
+
+Compartirlas ataría los dos procesos: renombrar una propiedad dentro de la API
+rompería el front **sin que nadie tocara el contrato HTTP**. Lo único que
+comparten es el JSON.
+
+> Con el front en otro lenguaje esto sería imposible y no habría nada que
+> cuidar. Aquí la tentación existe todos los días, y por eso es un artículo.
+
+### La pantalla habla el idioma del usuario
+
+Ni verbos HTTP, ni códigos de estado, ni nombres de tabla. Los dos botones de
+guardar se llaman **«Guardar la ficha completa»** y **«Guardar solo lo que
+cambié»**: que uno mande un reemplazo y el otro una modificación parcial es
+asunto del programa, no de quien usa el sistema.
+
+## Artículo 2 — Stack: C# y ASP.NET Core, con el SQL a la vista
+
+- Lenguaje **C#** sobre **ASP.NET Core** (.NET 10): controladores con
+  atributos, inyección de dependencias del framework y `async/await` en
+  todo el acceso a datos.
+- **SIN ORM de entidades** (sin Entity Framework): el SQL se escribe
+  A MANO, visible y **SIEMPRE parametrizado** (`@parametro` — jamás
+  concatenar valores). El ejecutor es **Dapper**, un micro-ejecutor sobre
+  ADO.NET: mapea fila→objeto pero nunca genera SQL por nosotros. Si una
+  consulta existe, está escrita en el repositorio y se puede leer.
+- Paquetes permitidos, y ninguno más sin que una spec lo pida:
+  `Microsoft.Data.SqlClient` (el cliente del motor), `Dapper` y
+  `Swashbuckle.AspNetCore` (Swagger).
+
+## Artículo 3 — Arquitectura en tres capas con interfaces, desde el día 1
+
+```
+HTTP → Controller (valida el body contra la PETICIÓN del verbo → 422)
+     → IServicio<Entidad>       (interfaz — reglas de negocio)
+     → IRepositorio<Entidad>    (interfaz — el servicio no sabe qué motor hay)
+     → Repositorio<Entidad>SqlServer  (Dapper, SQL a mano parametrizado)
+     → la base de datos
+```
+
+- El controlador no toca SQL; el servicio no conoce HTTP ni el motor; el
+  repositorio no conoce HTTP. Los contratos entre capas son `interface`
+  de C#.
+- **Solo el ensamblador** (el registro de dependencias en `Program.cs`)
+  conoce clases concretas. Todo lo demás recibe interfaces por
+  constructor.
+- El negocio comunica problemas con **excepciones**
+  (`ArgumentException` → 400 · `NoEncontradoExcepcion` → 404) y el
+  controlador las traduce a HTTP.
+
+**La regla, dibujada.** Las flechas son las ÚNICAS dependencias
+permitidas: cruzar capas o saltárselas viola la constitución.
+
+```mermaid
+flowchart TB
+    C["Controller<br/>HTTP: codigos y JSON"] -->|"conoce SOLO la interfaz"| IS["IServicio<br/>interfaz"]
+    S["Servicio<br/>reglas de negocio"] -.->|implementa| IS
+    S -->|"conoce SOLO la interfaz"| IR["IRepositorio<br/>interfaz"]
+    R["Repositorio SqlServer<br/>SQL parametrizado"] -.->|implementa| IR
+    R -->|"Dapper"| BD[("Base de datos")]
+    F["RepositorioFalso<br/>en memoria, para las pruebas"] -.->|implementa| IR
+    classDef prueba fill:#e6f0ff,stroke:#3b6ea5
+    class F prueba
+```
+
+Fíjese en el repositorio falso: como el servicio solo conoce la interfaz,
+se le puede enchufar uno de mentiras y probarlo **sin base de datos**. Esa
+prueba es un criterio de aceptación, no un adorno.
+
+## Artículo 4 — Un solo comando
+
+`docker compose up -d --build` deja TODO el sistema de la versión
+funcionando, desde la primera versión. Sin pasos manuales y sin instalar
+nada local más allá de Docker. El código va montado como volumen y corre
+con `dotnet watch`: guardar un `.cs` recompila y reinicia solo.
+
+## Artículo 5 — La base de datos viene DADA
+
+- La base `gestion_local` se crea **completa, con sus 19 tablas**, desde
+  la v1, a partir del script provisto en `db/`. Se copia, no se genera.
+- Los datos de los catálogos salen del Excel de referencia del módulo.
+- Lo que crece por versiones es **la API**, no la base. El código de cada
+  versión solo puede nombrar las tablas que su spec le permite.
+
+## Artículo 6 — Borrado LÓGICO, siempre
+
+- `DELETE` **nunca** borra la fila: marca `activo = 0`.
+- Todos los listados **filtran los inactivos** por defecto.
+- Toda tabla del módulo tiene su columna `activo BIT NOT NULL DEFAULT 1`.
+
+Es regla de la metodología del proyecto de aula y de su rúbrica: un
+borrado físico reprueba el criterio.
+
+## Artículo 7 — Los secretos van en variables de entorno
+
+**La regla del proyecto de aula:** ningún secreto —cadena de conexión,
+contraseña de la base, secreto de firma del JWT— va escrito en el código
+ni en archivos versionados. Van en **variables de entorno**, con el `.env`
+fuera de git y un `.env.example` adentro. En la rúbrica, un secreto
+quemado **anula el criterio de seguridad de la versión**.
+
+**Y este proyecto es la excepción, declarada.** Aquí la contraseña de SQL
+Server está escrita en **dos archivos versionados**, a propósito:
+
+- el `docker-compose.yml`, que se la entrega a los contenedores;
+- el `appsettings.json`, en la cadena de desarrollo — la que permite
+  correr la API sin Docker. En Docker esa cadena la sobreescribe la
+  variable de entorno, así que el valor del archivo solo sirve fuera.
+
+Está así porque este repositorio es una **plantilla didáctica**: corre en
+contenedores de juguete que se borran con `docker compose down -v`, nunca
+se despliega, y su gracia es que un `git clone` y **un solo comando**
+basten sin configurar nada antes.
+
+Y conviene ver el precio de la excepción: **una contraseña repartida en dos
+archivos es una contraseña que ya nadie sabe dónde está.** Con dos son
+cuatro sitios donde cambiarla; con un `.env`, uno solo. Eso es
+exactamente lo que se gana al hacerlo bien.
+
+**¿Y cómo sabe la contraseña quien clone esto?** Para *correr* el sistema
+no la necesita: el compose se la entrega a los contenedores y basta con
+`docker compose up -d --build`. Solo hace falta para conectarse **por
+fuera** —con SSMS o SQLTools contra `localhost:11472`— y entonces se lee
+del `docker-compose.yml`, que está en el repositorio. El
+`7_quickstart.md` y el `README.md` señalan dónde.
+
+> **Esa parte NO se copia.** El proyecto de aula se publica en un servidor
+> real en la v4: ahí la regla va completa desde la v1. De este ejemplo se
+> copia el método, no las credenciales.
+
+## Artículo 8 — Todo en español, y el código sustenta sus decisiones
+
+- Nombres, rutas, mensajes, comentarios y documentación: **en español**.
+- Los comentarios explican **por qué** está hecho así —la decisión y su
+  consecuencia—, no qué hace cada palabra del lenguaje. Un comentario que
+  repite la línea de abajo sobra; uno que explica por qué el repositorio
+  no conoce HTTP, no.
+- Se prefiere lo explícito sobre la metaprogramación compacta, y no por
+  didáctica: este código se revisa en Pull Requests y se sustenta
+  oralmente, así que tiene que poder leerse sin descifrarlo.
+
+## Artículo 9 — Contratos exactos
+
+Los endpoints, formatos y códigos de estado de cada versión están en su
+`6_contracts.md` y se cumplen **al pie de la letra** — incluido el
+contraste didáctico `PUT` (reemplazo completo → 422 si falta un campo) vs
+`PATCH` (parcial → 200 con el mismo cuerpo). El error también es contrato:
+un 404 o un 422 tienen su formato exacto documentado.
+
+## Artículo 10 — Convenciones fijas
+
+| Cosa | Convención |
+|---|---|
+| Puertos del proyecto | API **8074** · **front 8075** · SQL Server **11472** |
+| Base de datos | `gestion_local` |
+| Rutas | `/` (diagnóstico) · `/swagger` (documentación interactiva) · `/api/{tabla}` |
+| Nombres | PascalCase en español; interfaces con prefijo `I`; carpetas `Controllers/ Modelos/ Peticiones/ Servicios/ Repositorios/ Excepciones/ pruebas/` (`Modelos/` = clases entidad; `Peticiones/` = el cuerpo de cada verbo) |
+| Sobre de respuesta | Lecturas: `{tabla, limite, total, datos}` · Errores: `{estado, mensaje, detalle}` (+ `errores:[…]` en el 422) |
+| Errores | Cuerpo inválido (la petición) → **422** · `ArgumentException` → **400** · `NoEncontradoExcepcion` → **404** · `SqlException` y demás → **500** · lectura sin filas → **204** |
+| Credenciales | Usuario `sa`. **La contraseña no se escribe en este documento:** en esta plantilla vive en el `docker-compose.yml` y en un proyecto real, en el `.env` (Artículo 7) |
+
+## Artículo 10.1 — Una ruta y un servicio por recurso, nunca genéricos
+
+La API expone `/api/programa`. **No existe ni existirá** un `/api/{tabla}` con
+el nombre de la tabla como parámetro, y del lado del front hay un
+`ServicioPrograma`, no un `ApiService.Listar("programa")`.
+
+Lo genérico es más corto de escribir y más caro de vivir:
+
+| | |
+|---|---|
+| **No puede validar** | Cada tabla tiene sus campos y sus reglas. Un endpoint que sirve para todas no puede exigir ninguno |
+| **No puede documentarse** | ¿Qué campos pide `/api/{tabla}`? Swagger no lo sabe, y quien lo consume, tampoco |
+| **Apaga el compilador** | `Listar("aliadoo")` compila. `ServicioAliado.Listar()` no deja escribir el error |
+| **Vuelve el esquema un contrato** | Renombrar una columna deja de ser un cambio interno y pasa a romper a quien consume, en silencio |
+
+Cuando el módulo tenga más recursos habrá **un controlador, un servicio y una
+pantalla por cada uno**. Se van a parecer mucho, y esa repetición es el precio
+—consciente— de que cada recurso pueda decir lo suyo.
+
+
+## Artículo 11 — Cómo se enmienda esta constitución
+
+Una regla se cambia **solo** así: se propone en el `4_research.md` de la
+versión que la necesita, con su razón y sus consecuencias; si se acepta,
+esta constitución **sube de versión** y se anota la fecha de enmienda. No
+se corrige "de una" ni se deja pasar por excepción: si un plan la viola,
+o se corrige el plan, o se enmienda esto.
+
+---
+
+*Versión 1.0.0 · Ratificada el 2026-08-29 · Última enmienda: ninguna*
+
+## Artículo 12 — La identidad visual es ARTEFACTO DADO
+
+El sistema se construye para la **Universidad Monte Verde**, y esa
+institución **ya decidió cómo se ve**. Su Manual de Identidad Visual
+Corporativa está en la raíz del repositorio:
+[`MANUAL_DE_MARCA.md`](../../MANUAL_DE_MARCA.md).
+
+Igual que el esquema de la base, **el manual no se discute: se cumple.**
+
+| | |
+|---|---|
+| Los valores del manual viven en | `front_blazor/wwwroot/marca.css` |
+| Los estilos de la aplicación usan | `var(--umv-verde)`, nunca `#1F5E4C` |
+| El logosímbolo está en | `marca/` |
+
+**Tres reglas que salen del manual y son de obligado cumplimiento:**
+
+1. **Los colores no se cambian.** El artículo tercero de la resolución que
+   adopta el manual es explícito. Un color corporativo alterado es un
+   defecto, no un detalle estético.
+2. **El logosímbolo respeta su tamaño mínimo y su área de reserva**, y va
+   sobre banda blanca: el manual no contempla versión negativa.
+3. **Los colores de estado no son los institucionales.** Un error se marca
+   en rojo alerta, no en ocre: un error en ocre se lee como decoración.
+
+**Por qué `marca.css` está aparte de los estilos de la aplicación:** porque
+son dos cosas distintas. Ahí van los **valores que fija el manual** —y que no
+se pueden cambiar—; en el otro archivo, **cómo se usan**. El día que la
+Universidad actualice su manual, se cambia un archivo y nada más.
+
+> **Universidad Monte Verde es una institución inventada para el curso.** El
+> manual está escrito como uno real porque el ejercicio es aprender a
+> trabajar con una restricción de marca, que es lo que va a encontrar en
+> cualquier organización.
+>
+> El porqué de todo esto, con la fórmula del contraste y las referencias,
+> está en [`CONCEPTOS_IDENTIDAD_VISUAL.md`](../CONCEPTOS_IDENTIDAD_VISUAL.md).
