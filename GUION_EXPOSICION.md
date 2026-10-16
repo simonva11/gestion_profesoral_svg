@@ -354,3 +354,59 @@ docker compose exec api-gestion dotnet run --project tests/GestionProfesoral.Tes
 
 > «Eso no lo tengo resuelto todavía, y está anotado en la trazabilidad como
 > pendiente. Lo que sí puedo mostrar es…»
+
+---
+
+# CHULETA FINAL — dónde está cada cosa
+
+> Para abrir rápido mientras preguntan. Rutas completas, aunque suenen obvias.
+
+## Cómo llegar a cada archivo
+
+| Lo que piden | Ruta exacta |
+|---|---|
+| **Los requerimientos** | `GestionProfesoral-Backend/docs/spec_kit/versiones/v2_docente/2_spec.md` → sección 4 |
+| **Los criterios** | el mismo archivo → sección 8 |
+| **Los endpoints** | `.../v2_docente/6_contracts.md` → sección 1 |
+| **Los controladores** | `GestionProfesoral-Backend/src/GestionProfesoral.Api/Controllers/` |
+| **Los servicios** | `.../src/GestionProfesoral.Application/Servicios/` |
+| **Los repositorios** | `.../src/GestionProfesoral.Infrastructure/Persistencia/` |
+| **Las entidades** | `.../src/GestionProfesoral.Domain/Entidades/` |
+| **Los procedimientos** | `GestionProfesoral-Backend/db/gestion_profesoral.sql`, línea 528 en adelante |
+| **Los diagramas** | `GestionProfesoral-Backend/docs/dominio/DIAGRAMAS_SECUENCIA.md` |
+| **La trazabilidad** | `GestionProfesoral-Backend/docs/TRAZABILIDAD.md` |
+
+## Las cuatro capas, una frase cada una
+
+| Capa | Carpeta | Una frase |
+|---|---|---|
+| **Domain** | `src/GestionProfesoral.Domain/` | «Dice **qué es** un docente. No depende de nada» |
+| **Application** | `src/GestionProfesoral.Application/` | «**Decide**. Aquí están las reglas del negocio» |
+| **Infrastructure** | `src/GestionProfesoral.Infrastructure/` | «**Guarda**. Es lo único que sabe que hay SQL Server» |
+| **Api** | `src/GestionProfesoral.Api/` | «**Traduce**. Es lo único que sabe que esto se habla por internet» |
+
+## Qué hace un controlador, y qué NO hace
+
+`src/GestionProfesoral.Api/Controllers/DocenteController.cs`
+
+| Hace | NO hace |
+|---|---|
+| Recibe la petición | Reglas de negocio |
+| Convierte el formulario en entidad | SQL |
+| Llama al servicio | Conocer la base de datos |
+| Convierte la excepción en número (200, 404, 409, 422) | Decidir nada |
+
+> «Si el controlador tuviera un `if` de negocio, esa regla solo valdría para
+> quien entre por internet. Puesta en el servicio, vale siempre.»
+
+## SOLID, una letra y un archivo
+
+| Letra | Qué significa | Dónde se ve |
+|---|---|---|
+| **S** · una responsabilidad | Cada clase cambia por una sola razón | `ServicioDocente` decide · `RepositorioDocenteSqlServer` guarda. Dos razones, dos clases |
+| **O** · abierto/cerrado | Se extiende sin modificar | Para cambiar de motor se **agrega** `RepositorioDocentePostgres` y se cambia **una línea** de `Program.cs`. El servicio no se toca |
+| **L** · sustitución | Cualquier implementación sirve | El `RepositorioDocenteFalso` de `tests/` reemplaza al real y el servicio ni se entera |
+| **I** · interfaces pequeñas | Una interfaz por recurso | `IRepositorioDocente`, `IRepositorioPrograma`… no una interfaz gigante |
+| **D** · inversión de dependencias | Se depende de abstracciones | El servicio recibe `IRepositorioDocente`, nunca la clase. Y la interfaz vive en **Domain**: la capa de adentro declara, la de afuera obedece |
+
+> La frase que lo resume: **«todas las flechas apuntan hacia adentro»**.
