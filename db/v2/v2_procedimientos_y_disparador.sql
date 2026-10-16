@@ -225,13 +225,25 @@ GO
 -- Atraparlo aquí y devolver un código propio obligaría a inventar un
 -- segundo lenguaje de errores encima del que ya tiene el motor.
 CREATE OR ALTER PROCEDURE sp_crear_estudios_realizados
-    @Id INT, @Titulo VARCHAR(45), @Universidad VARCHAR(50), @Fecha DATE,
+    @Id INT = NULL, @Titulo VARCHAR(45), @Universidad VARCHAR(50), @Fecha DATE,
     @Tipo VARCHAR(45), @Ciudad VARCHAR(45), @Docente INT,
     @InsAcreditada TINYINT, @Metodologia VARCHAR(45),
     @PerfilEgresado VARCHAR(MAX), @Pais VARCHAR(45)
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    -- EL ID LO PONE LA BASE CUANDO NO LLEGA, Y HAY QUE SABER POR QUE.
+    -- La tabla no es IDENTITY en el esquema dado —si lo fuera, esto sobraria—
+    -- y cambiarla seria alterar el esquema del profesor (ADR-07). Un numero de
+    -- estudio tampoco es algo que una persona deba inventar en un formulario.
+    -- El UPDLOCK/HOLDLOCK impide que dos peticiones simultaneas lean el mismo
+    -- maximo y calculen el mismo id: sin el, el segundo INSERT reventaria por
+    -- llave duplicada justo cuando hay dos personas trabajando.
+    IF @Id IS NULL
+        SELECT @Id = ISNULL(MAX(id), 0) + 1
+        FROM estudios_realizados WITH (UPDLOCK, HOLDLOCK);
+
     INSERT INTO estudios_realizados (id, titulo, universidad, fecha, tipo,
         ciudad, docente, ins_acreditada, metodologia, perfil_egresado, pais)
     VALUES (@Id, @Titulo, @Universidad, @Fecha, @Tipo, @Ciudad, @Docente,
