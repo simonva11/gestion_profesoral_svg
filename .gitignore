@@ -15,3 +15,6 @@ desktop.ini
 
 # Los originales del profesor: NO se publican (la carpeta lo dice en su nombre)
 ProyectosDeAula/docs/_originales_no_subir/
+
+# Los guiones de la exposicion son personales: no van al repositorio
+GUION_*.md
