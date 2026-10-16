@@ -24,6 +24,13 @@ builder.Services.AddHttpClient<ServicioPrograma>(cliente =>
     cliente.Timeout = TimeSpan.FromSeconds(10);
 });
 
+// v2, fase 1 — un servicio por recurso, no uno que sirva para cualquier tabla
+builder.Services.AddHttpClient<ServicioDocente>(cliente =>
+{
+    cliente.BaseAddress = new Uri(urlApi);
+    cliente.Timeout = TimeSpan.FromSeconds(10);
+});
+
 // ============================================================
 // UN SERVICIO POR RECURSO (Artículo 10.1)
 //

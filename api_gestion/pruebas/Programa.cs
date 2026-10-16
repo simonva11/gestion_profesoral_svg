@@ -183,6 +183,10 @@ public class Programa_Pruebas
                 "Tras el borrado, el sistema vuelve a estar vacío.",
                 "Debía quedar vacío otra vez.");
 
+        // v2 — las pruebas del docente corren a continuación, en el mismo
+        // proceso y con la misma regla: sin base de datos.
+        if (!await Docente_Pruebas.Ejecutar()) _bien = false;
+
         Console.WriteLine(_bien
             ? "=== Prueba de capas completada CON ÉXITO ==="
             : "=== Prueba de capas FALLIDA: mire los [ERROR] de arriba ===");
