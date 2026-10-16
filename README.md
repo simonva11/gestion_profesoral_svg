@@ -1,24 +1,106 @@
-# Gestión Profesoral — proyecto de aula
+# Gestión Profesoral — versión 2
 
-Módulo **Gestión Profesoral** del proyecto de aula de Diseño de Software.
-API en **C# / ASP.NET Core** sobre **SQL Server**, interfaz en **Blazor
-Server**, todo en Docker.
+Módulo **Gestión Profesoral** del proyecto de aula. Este README es **el mapa
+de la sustentación**: dónde está cada cosa que hay que mostrar.
 
-> **De dónde parte este repositorio.** La base de la **v1** es el ejemplo de
-> referencia del profesor
+> La base de la v1 se retomó del ejemplo del profesor
 > ([ccastro2050/proyecto_gestion_profesoral1](https://github.com/ccastro2050/proyecto_gestion_profesoral1)),
-> que la metodología permite retomar y completar: *«el equipo que tome este
-> ejemplo lo revisa, y si está de acuerdo lo retoma y lo completa; si no, lo
-> rehace a su manera»* (0_mapa_versiones.md). Su README original quedó en
-> [`docs/README_ejemplo_profesor.md`](docs/README_ejemplo_profesor.md).
-> Lo de la **v2** —spec kit, procedimientos almacenados, disparador y la
-> rebanada de `docente`— es trabajo de este equipo.
+> como permite la metodología. La **v2** —spec kit, procedimientos
+> almacenados, disparador, el 409 de integridad y la rebanada de `docente`—
+> es trabajo de este equipo.
 
 ---
 
-## 1. Arranque: un solo comando
+## 1. Los lenguajes
 
-Solo hace falta **Docker Desktop**.
+| Pieza | Lenguaje | Dónde |
+|---|---|---|
+| **API** | **C# · ASP.NET Core · .NET 10**, con **Dapper** | `api_gestion/` |
+| **Interfaz** | **Razor / Blazor Server** (C# + HTML) | `front_blazor/` |
+| **Base de datos** | **T-SQL** sobre **SQL Server 2022**: tablas, **procedimientos almacenados** y **disparador** | `db/` |
+| **Spec kit y diagramas** | **Markdown + Mermaid** (el diagrama es texto, se versiona y lo lee la IA) | `docs/spec_kit/` |
+| **Pruebas** | C# (prueba de capas) y Bash + curl (humo) | `api_gestion/pruebas/`, `pruebas_humo/` |
+| **Orquestación** | YAML (Docker Compose) y Dockerfile | `docker-compose.yml` |
+
+---
+
+## 2. La programación por capas: dónde se ve en el código
+
+```
+Navegador → front_blazor (8075) → api_gestion (8074) → SQL Server (1433)
+```
+
+| Capa | Archivo exacto | Qué hace | Qué tiene PROHIBIDO |
+|---|---|---|---|
+| **1 · HTTP** | [`api_gestion/Controllers/DocenteController.cs`](api_gestion/Controllers/DocenteController.cs) | Traduce cuerpo ↔ entidad y excepciones ↔ códigos (200/204/400/404/409/422) | Reglas de negocio · SQL · conocer `SqlException` |
+| **2 · Negocio** | [`api_gestion/Servicios/ServicioDocente.cs`](api_gestion/Servicios/ServicioDocente.cs) | Las reglas: `limite ≤ 0`, PATCH vacío, y **no se retira un docente con detalle activo** | Conocer HTTP, `IActionResult` o las clases de `Peticiones/` |
+| **3 · Datos** | [`api_gestion/Repositorios/RepositorioDocenteSqlServer.cs`](api_gestion/Repositorios/RepositorioDocenteSqlServer.cs) | **Llamar** a los procedimientos (`CommandType.StoredProcedure`) y traducir el error del motor | **Escribir SQL a mano** · decidir |
+| **Base** | [`db/gestion_profesoral.sql`](db/gestion_profesoral.sql) | El SQL: `SELECT`, `INSERT`, `JOIN` y el **disparador** | — |
+
+**Las interfaces son las que hacen que las capas existan de verdad:**
+
+| Contrato | Archivo |
+|---|---|
+| `IServicioDocente` | [`api_gestion/Servicios/IServicioDocente.cs`](api_gestion/Servicios/IServicioDocente.cs) |
+| `IRepositorioDocente` | [`api_gestion/Repositorios/IRepositorioDocente.cs`](api_gestion/Repositorios/IRepositorioDocente.cs) |
+| **El ensamblador** — el único sitio donde una clase concreta aparece junto a su interfaz | [`api_gestion/Program.cs`](api_gestion/Program.cs) |
+| La traducción `SqlException` → **409** | [`api_gestion/Repositorios/TraductorErroresSql.cs`](api_gestion/Repositorios/TraductorErroresSql.cs) |
+
+> **La demostración, no la afirmación:** `api_gestion/pruebas/Docente.cs`
+> prueba el servicio con un repositorio **de mentiras** y **corre con los
+> contenedores apagados**. Si el servicio tuviera dentro una cadena de
+> conexión, no compilaría.
+>
+> ```bash
+> docker compose exec api-gestion dotnet run --project pruebas/PruebaCapas.csproj
+> ```
+
+---
+
+## 3. Los diagramas de secuencia: el flujo de la información
+
+**Todos en Mermaid, dentro de los `.md`** (ninguna imagen pegada), y las
+cajas tienen **los nombres reales de las clases**.
+
+| Qué muestra | Archivo |
+|---|---|
+| **Una secuencia por historia de usuario** (6): listar, crear con desplegable, maestro-detalle, lote transaccional, tabla puente y la regla de retiro | [`docs/spec_kit/0_historias_de_usuario.md`](docs/spec_kit/0_historias_de_usuario.md) |
+| **El camino feliz completo**, de la pantalla a la base y de vuelta, con el disparador | [`docs/spec_kit/versiones/v2_docente/3_plan.md`](docs/spec_kit/versiones/v2_docente/3_plan.md) §3 |
+| **Las secuencias de ERROR**: el 404, el 422, el **409 de integridad** y el **409 de regla de negocio** | [`docs/spec_kit/versiones/v2_docente/6_contracts.md`](docs/spec_kit/versiones/v2_docente/6_contracts.md) §3 |
+| Contexto, despliegue, clases, entidad-relación, ciclo de validación y fases | `2_spec.md`, `3_plan.md`, `5_data_model.md`, `7_quickstart.md`, `8_tasks.md` |
+
+---
+
+## 4. El spec kit: requisitos y endpoints
+
+| Documento | Qué contesta |
+|---|---|
+| [**`2_spec.md`**](docs/spec_kit/versiones/v2_docente/2_spec.md) | **El documento número dos**: propósito, alcance, **los 10 requisitos funcionales (RF1–RF10)**, las decisiones D1–D6, las aclaraciones y **los 12 criterios de aceptación** |
+| [**`6_contracts.md`**](docs/spec_kit/versiones/v2_docente/6_contracts.md) | **Los endpoints exactos**, el catálogo de códigos y la tabla de desenlaces por endpoint |
+| [`0_historias_de_usuario.md`](docs/spec_kit/0_historias_de_usuario.md) | Las historias con su criterio de aceptación y su secuencia |
+| [`3_plan.md`](docs/spec_kit/versiones/v2_docente/3_plan.md) | El plan técnico y el chequeo de constitución |
+| [`4_research.md`](docs/spec_kit/versiones/v2_docente/4_research.md) | Las 8 decisiones de arquitectura, con su alternativa descartada |
+| [`5_data_model.md`](docs/spec_kit/versiones/v2_docente/5_data_model.md) | Las 11 tablas y **quién escribe cada columna** |
+| [`7_quickstart.md`](docs/spec_kit/versiones/v2_docente/7_quickstart.md) | Cómo se comprueba cada criterio |
+| [`8_tasks.md`](docs/spec_kit/versiones/v2_docente/8_tasks.md) | Las fases con compuertas y el reparto por integrante |
+| [`9_checklist.md`](docs/spec_kit/versiones/v2_docente/9_checklist.md) | La compuerta 3, que firma una persona |
+| [`GUIA_IA2.md`](docs/spec_kit/versiones/v2_docente/GUIA_IA2.md) | Los prompts, con lo que hubo que corregirle a la IA |
+
+### Los endpoints de la fase 1 (funcionando)
+
+```
+GET    /api/docente[?limite=N]      GET    /api/docente/{cedula}
+POST   /api/docente                 PUT    /api/docente/{cedula}
+PATCH  /api/docente/{cedula}        DELETE /api/docente/{cedula}
+GET    /api/linea-investigacion     ← llena el desplegable de la clave foránea
+```
+
+Y los de la v1 (`/api/programa`) siguen pasando. Todo en
+**http://localhost:8074/swagger**.
+
+---
+
+## 5. Arrancar y comprobar
 
 ```bash
 docker compose up -d --build
@@ -26,103 +108,26 @@ docker compose up -d --build
 
 | Qué | Dónde |
 |---|---|
-| **La pantalla** — empiece por aquí | **http://localhost:8075** |
-| API — diagnóstico | http://localhost:8074/ |
-| Documentación interactiva (Swagger) | http://localhost:8074/swagger |
-| Docentes (v2) | http://localhost:8074/api/docente |
-| Programas (v1) | http://localhost:8074/api/programa |
-
-> Para recargar la base con los **procedimientos y el disparador** de la v2
-> hay que borrar el volumen, o el script no se vuelve a ejecutar:
->
-> ```bash
-> docker compose down -v && docker compose up -d --build
-> ```
-
-**La prueba de capas, sin base de datos** (apague los contenedores y
-córrala: ahí está la demostración de que las capas existen):
+| **La pantalla** | **http://localhost:8075** |
+| Swagger | http://localhost:8074/swagger |
 
 ```bash
-cd api_gestion/pruebas && dotnet run
+bash pruebas_humo/humo_docente_v2.sh    # 15 comprobaciones, con las que deben fallar
 ```
 
----
-
-## 2. Dónde está cada cosa
-
-| Carpeta | Qué hay |
-|---|---|
-| `api_gestion/` | **La API**. Tres capas: `Controllers/` → `Servicios/` → `Repositorios/` |
-| `front_blazor/` | **La interfaz**. Consume la API por HTTP; **nunca** toca la base |
-| `db/` | El script de la base: 19 tablas, **procedimientos almacenados** y el **disparador** |
-| `db/v2/` | Los objetos de la v2 por separado, para leerlos sin buscar |
-| `docs/spec_kit/` | **El spec kit**: la constitución, las historias de usuario y una carpeta por versión |
-| `docs/*.md` | El material conceptual del curso (SOLID, capas, ACID, Docker, pruebas, SDD) |
-| `ProyectosDeAula/` | El material del curso: metodología, documentos de módulo y scripts |
-| `postman/` | Las colecciones de prueba, **incluidas las peticiones que deben fallar** |
+> Para recargar la base con los procedimientos: `docker compose down -v && docker compose up -d --build`
+> (sin el `-v` el script no se vuelve a ejecutar).
 
 ---
 
-## 3. La arquitectura, en una línea cada una
+## 6. Ramas y commits
 
-```
-Navegador → front_blazor (8075) → api_gestion (8074) → SQL Server (1433)
-```
+- **Nadie trabaja en `main`**: cada integrante en su `rama-<nombre>`.
+- Todo entra por **Pull Request**, y el merge lo hace **solo el encargado**.
+- Commits pequeños y descriptivos en castellano; cada versión cierra con su **tag**.
+- Secretos por variable de entorno: copie `.env.example` a `.env` (que no se sube).
 
-| Capa | Carpeta | Hace | Tiene prohibido |
-|---|---|---|---|
-| 1 · HTTP | `api_gestion/Controllers/` | Traduce cuerpo ↔ entidad y excepciones ↔ códigos | Reglas de negocio · SQL |
-| 2 · Negocio | `api_gestion/Servicios/` | Las reglas (incluido el 409 de la regla D2) | Conocer HTTP |
-| 3 · Datos | `api_gestion/Repositorios/` | **Llamar** a los procedimientos almacenados | **Escribir SQL a mano** |
-| Base | `db/gestion_profesoral.sql` | El SQL y el disparador | — |
-
-Cada capa depende de la **interfaz** de la siguiente. El único sitio donde
-una clase concreta aparece junto a su interfaz es `api_gestion/Program.cs`.
-
-Está contada entera, con diagramas, en
-[`docs/ARQUITECTURA_V2.md`](docs/ARQUITECTURA_V2.md).
-
----
-
-## 4. Las versiones
-
-| Versión | Qué agrega | Estado |
-|---|---|---|
-| v1 | CRUD de las tablas **sin** clave foránea | base retomada del ejemplo |
-| **v2** | CRUD de las **11 tablas con clave foránea**, todo por **procedimientos almacenados**, **un disparador**, desplegables para las FK y **409** de integridad | **en construcción** |
-| v3 | JWT, sesiones y control de acceso | sin especificar |
-| v4 | Consultas multitabla, tablero, marca y publicación | sin especificar |
-
-El detalle está en
-[`docs/spec_kit/versiones/0_mapa_versiones.md`](docs/spec_kit/versiones/0_mapa_versiones.md).
-**Las versiones no son repositorios**: para ver una anterior se abre su tag.
-
-### El spec kit de la v2
-
-| Documento | Qué contesta |
-|---|---|
-| [`0_historias_de_usuario.md`](docs/spec_kit/0_historias_de_usuario.md) | Las historias H5–H10, **cada una con su diagrama de secuencia** |
-| [`2_spec.md`](docs/spec_kit/versiones/v2_docente/2_spec.md) | Qué construye la v2, el alcance y los 12 criterios |
-| [`3_plan.md`](docs/spec_kit/versiones/v2_docente/3_plan.md) | Cómo se construye · despliegue, clases y camino feliz |
-| [`4_research.md`](docs/spec_kit/versiones/v2_docente/4_research.md) | Las 8 decisiones, con lo que se gana y lo que se pierde |
-| [`5_data_model.md`](docs/spec_kit/versiones/v2_docente/5_data_model.md) | Las tablas y **quién escribe cada columna** |
-| [`6_contracts.md`](docs/spec_kit/versiones/v2_docente/6_contracts.md) | Los endpoints exactos y **las secuencias de error** |
-| [`7_quickstart.md`](docs/spec_kit/versiones/v2_docente/7_quickstart.md) | Cómo se levanta y cómo se comprueba cada criterio |
-| [`8_tasks.md`](docs/spec_kit/versiones/v2_docente/8_tasks.md) | Las fases con sus compuertas y el reparto por integrante |
-| [`9_checklist.md`](docs/spec_kit/versiones/v2_docente/9_checklist.md) | La compuerta 3, que se firma a mano |
-| [`GUIA_IA2.md`](docs/spec_kit/versiones/v2_docente/GUIA_IA2.md) | Los prompts, **con lo que hubo que corregirle a la IA** |
-
----
-
-## 5. Cómo se trabaja aquí
-
-- **Nadie trabaja en `main`.** Cada integrante tiene su rama `rama-<nombre>`.
-- Todo llega a `main` por **Pull Request**, y el merge lo hace **solo el
-  encargado del main**.
-- Commits pequeños, frecuentes y descriptivos **en castellano**.
-- Cada versión cierra con su **tag** (`v1`, `v2`, …).
-- **Cero secretos en el código**: van por variable de entorno. Copie
-  `.env.example` a `.env` — el `.env` no se sube.
-
-Las reglas completas, con ejemplos de mensajes de commit y la plantilla de
-PR, están en [`docs/RAMAS_Y_COMMITS.md`](docs/RAMAS_Y_COMMITS.md).
+Las reglas, con ejemplos de mensajes y la plantilla de PR, en
+[`docs/RAMAS_Y_COMMITS.md`](docs/RAMAS_Y_COMMITS.md).
+El guión de lo que se proyecta y se responde, en
+[`docs/GUIA_DE_SUSTENTACION.md`](docs/GUIA_DE_SUSTENTACION.md).
