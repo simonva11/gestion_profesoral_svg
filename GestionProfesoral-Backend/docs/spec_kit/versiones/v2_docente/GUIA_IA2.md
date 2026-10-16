@@ -1,182 +1,197 @@
 # Guía de IA — Versión 2
 
-> **El eslabón del medio.** El spec kit dice **qué** construir, el código es
-> **lo construido**, y esto es **cómo se pasó de uno al otro**: los prompts que
-> de verdad se usaron y, sobre todo, **lo que hubo que corregirle a la IA**.
+> **El eslabón del medio.** La especificación dice **qué** construir, el
+> código es **lo construido**, y esta guía es **cómo se pasó de uno al otro**:
+> los prompts que se usaron y, sobre todo, lo que hubo que corregirle a la IA.
 >
-> **Modalidad:** IDE agéntico (Claude Code), sobre este mismo repositorio.
+> **Modalidad:** IDE agéntico, sobre este mismo repositorio.
 > **Autor:** _______________________ · rama `rama-simon`.
->
-> Este proyecto lo desarrolla **una sola persona**, así que aquí no hay un
-> prompt por integrante: está la secuencia completa, en el orden en que
-> ocurrió.
 
 ---
 
-## 1. Las reglas con las que se trabajó
+## 1. Criterios de trabajo con IA
 
 | | |
 |---|---|
-| **Se puede usar IA** | Sí. Nadie va a preguntar quién escribió la línea |
-| **Lo que NO se puede** | Entregar algo que no se pueda contar. Si la IA lo escribió y uno no lo entendió, **no está entregado: está pegado** |
-| **La ambigüedad se MARCA** | Cuando la IA dijo «asumo que…», se la paró y la respuesta se escribió **en el `2_spec.md`**, no solo en el chat |
-| **Los comentarios dicen por qué** | «recorre la lista» no vale; «el detalle va en un solo envío porque un fallo a mitad dejaría medio registro» sí |
-| **Se comprueba lo que comenta** | La IA comenta lo que *cree* que hizo. Por eso todo se levantó y se probó |
+| **Qué se delega** | La escritura mecánica: una rebanada vertical ya especificada es el mismo molde con otros nombres |
+| **Qué no se delega** | Las decisiones del dominio, qué entra al repositorio y la verificación de lo generado |
+| **Las ambigüedades se marcan** | Cuando la IA propone un valor por defecto para algo que la spec no define, se detiene y la respuesta se escribe en el `2_spec.md` |
+| **Los comentarios dicen por qué** | Un comentario que repite el nombre del método no aporta; el que dice la razón, sí |
+| **Todo se comprueba corriendo** | La IA documenta lo que cree que hizo. Lo que vale es haberlo levantado y haberlo hecho fallar |
 
 ---
 
-## 2. Prompt 1 — el encuadre: leer el ejemplo y la metodología antes de escribir nada
+## 2. Prompt 1 — encuadre sobre el método y el esquema
 
 ```text
-https://github.com/ccastro2050/proyecto_gestion_profesoral1
+Contexto: módulo Gestión Profesoral de un proyecto académico, construido con
+Spec-Driven Development. Te paso tres fuentes, en este orden de autoridad:
 
-Entra a este GitHub. Tengo que mostrar cómo se dio la arquitectura del
-código, los diagramas de secuencia, el spec kit, y que si ahí decimos que
-hace una funcionalidad, en el código se vea reflejado.
+  1. 0_METODOLOGIA.md — el método, los diagramas obligatorios y la rúbrica
+  2. VERSION_2.md     — qué se espera exactamente de esta versión
+  3. db/gestion_profesoral.sql — el esquema, que es la fuente de verdad de
+     las tablas: no inventes columnas ni cambies nombres
 
-Lo que tengo que hacer es la VERSIÓN DOS de este proyecto: cuáles son las
-ramas y los commits, los diagramas de secuencia, el spec kit, el contract,
-las capas — sustentar todo. La API que vamos a tener debe conectar toda la
-data a la base de datos, y debemos tener una interfaz donde se haga el
-CRUD. Importante: la arquitectura.
+Stack: API en C# / ASP.NET Core sobre SQL Server con Dapper, front en Blazor
+Server, todo en Docker.
+
+Tarea: escribir el spec kit de la v2 en docs/spec_kit/versiones/v2_docente/,
+con los nueve documentos del molde y la guía de IA, describiendo solo el
+delta sobre la v1. El detalle de cada documento y los diagramas obligatorios
+están en PROMPT_GENERAR_SPEC_KIT.md, en esta misma carpeta.
 ```
 
-Y a continuación, el documento que manda:
+**Por qué el encuadre va primero.** Pedirle código antes de darle el método
+produce una estructura plausible pero sin los diagramas que la rúbrica exige
+y sin los criterios de aceptación. El orden no es cortesía: es lo que hace
+que la spec sirva para decidir.
 
-```text
-https://github.com/ccastro2050/proyecto_diseno_de_software4/blob/main/
-ProyectosDeAula/docs/0_METODOLOGIA.md
+### Correcciones
 
-Acá está la metodología y es lo que se espera de la versión dos.
-```
-
-**Por qué este prompt primero y no «escríbeme el código».** Porque el método
-es SDD: la especificación manda. Darle el repositorio y la metodología **antes**
-de pedirle una línea de código es lo que hizo que la spec saliera con los
-diagramas obligatorios de la §4 y con los doce criterios, en vez de un
-`2_spec.md` inventado.
-
-### Qué hubo que corregirle
-
-| Lo que hizo la IA | Por qué estaba mal | Lo que se le escribió |
+| Lo generado | Problema | Corrección aplicada |
 |---|---|---|
-| Empezó a escribir el spec kit **antes** de leer la metodología | Habría salido un spec kit con la estructura del ejemplo pero sin los diagramas obligatorios ni la interpretabilidad | Se le pasó el enlace de `0_METODOLOGIA.md` a mitad de camino y **rehízo el plan**: historias con secuencia, compuertas y los 12 criterios |
-| Dio por hecho que la API era .NET 8 | El `.csproj` del repositorio dice **net10.0** | «Mira el `.csproj` antes de afirmar la versión» |
+| Empezó el spec kit con la estructura del ejemplo, sin haber leído la metodología | Habrían faltado los diagramas obligatorios de la §4 y los criterios de interpretabilidad | Se le pasó `0_METODOLOGIA.md` y se rehízo el plan: historias con secuencia, tres compuertas y doce criterios |
+| Asumió .NET 8 por la antigüedad del ejemplo | El `.csproj` del repositorio declara `net10.0` | «Verifica el `TargetFramework` en el `.csproj` antes de fijar la versión» |
 
 ---
 
-## 3. Prompt 2 — la fase 1, la rebanada vertical de `docente`
+## 3. Prompt 2 — la rebanada vertical de `docente`
 
 ```text
-Empecemos a construir el código de la fase 1 (docente): los 8 archivos de
-la rebanada vertical más sus procedimientos.
-```
+Implementa la fase 1 del 8_tasks.md: la rebanada vertical completa de la
+tabla docente, según el 5_data_model.md y el 6_contracts.md.
 
-Con el encuadre ya puesto por el spec kit, ese prompt corto alcanzó porque el
-`3_plan.md` §4.2 ya decía **cuáles son los ocho archivos** y el `6_contracts.md`
-ya decía **qué responde cada endpoint**. Ese es el punto del método: cuando la
-spec está escrita, el prompt se vuelve corto.
-
-Las reglas que sí hubo que repetirle explícitamente:
-
-```text
-Tres cosas que NO puedes equivocar:
+Restricciones que no se pueden incumplir:
 
 - linea_investigacion_principal es NULLABLE: la propiedad es int? y el
-  desplegable manda null cuando la persona elige «(ninguna)». null NO es
-  cadena vacía ni cero.
-- activo no viaja en el JSON ni se acepta en el cuerpo.
-- total_estudios lo escribe un disparador: la API lo LEE y nunca lo manda.
+  desplegable manda null cuando se elige «(ninguna)». null no es cadena
+  vacía ni 0.
+- activo no viaja en el JSON de respuesta ni se acepta en el cuerpo.
+- total_estudios lo escribe un disparador: la API lo lee y nunca lo envía.
+- El repositorio no puede contener SQL: solo CommandType.StoredProcedure
+  con parámetros.
+- El controlador no puede importar Microsoft.Data.SqlClient: la traducción
+  de SqlException a 409 vive en la capa de datos.
 
-Y el repositorio NO puede tener una línea de SQL: solo
-CommandType.StoredProcedure con parámetros. El controlador NO puede importar
-Microsoft.Data.SqlClient: la traducción de SqlException a 409 vive en la
-capa 3.
+Comenta cada decisión no obvia explicando por qué, no qué.
 ```
 
-### Qué hubo que corregirle
+Con la spec escrita, el prompt se vuelve corto: el `3_plan.md` ya define los
+ocho archivos de la rebanada y el `6_contracts.md` ya define cada respuesta.
 
-| # | Lo que pasó | Por qué importaba | La corrección |
+### Correcciones
+
+| # | Lo generado | Problema | Corrección aplicada |
 |---|---|---|---|
-| 1 | El proyecto de pruebas **ya tenía un `Main`** y la IA escribió otro en el archivo nuevo | Dos `Main` en un mismo proyecto no compilan | Se convirtió la prueba del docente en `Ejecutar()` y se **encadenó** desde el `Main` que ya existía |
-| 2 | La tabla `estudios_realizados` **no es `IDENTITY`** en el esquema dado | El alta por lote habría obligado a que alguien inventara los id a mano, y dos peticiones simultáneas chocarían | Se le pidió que el **procedimiento** asignara el id cuando no llega, con `UPDLOCK, HOLDLOCK` para que dos peticiones no calculen el mismo número |
-| 3 | Dejó el `DELETE` físico en un procedimiento de eliminar | El borrado es lógico en todo el proyecto: un `DELETE` pierde la historia y rompe el criterio 10 | «Cámbialo por `UPDATE ... SET activo = 0 WHERE ... AND activo = 1`, y explica en un comentario por qué lleva el `AND activo = 1`» |
+| 1 | Un segundo `Main` en el proyecto de pruebas | Dos puntos de entrada en un mismo proyecto no compilan | Las pruebas del docente pasaron a `Ejecutar()`, encadenado desde el `Main` existente |
+| 2 | El alta por lote exigía que el id del estudio viniera del formulario | `estudios_realizados` no es `IDENTITY` en el esquema dado, y dos peticiones simultáneas colisionarían | El procedimiento asigna el id cuando no llega, con `UPDLOCK, HOLDLOCK` dentro de la transacción |
+| 3 | `sp_eliminar_*` con `DELETE` | El borrado del proyecto es lógico: un `DELETE` pierde el historial y rompe el criterio 10 | `UPDATE … SET activo = 0 WHERE … AND activo = 1`, con el comentario de por qué lleva la segunda condición |
 
 ---
 
-## 4. Prompt 3 — levantarlo y comprobarlo, que es donde se cae lo que «parecía» bien
+## 4. Prompt 3 — verificación con el sistema levantado
 
 ```text
-Ya prendí Docker Desktop. Levanta el proyecto, verifica que compile y
-comprueba el CRUD de docente, el desplegable y el 409.
+Levanta el proyecto con docker compose, verifica que compile y comprueba
+contra la API: el CRUD completo de docente, que el desplegable de la clave
+foránea traiga opciones, y que los errores de integridad respondan 409 y no
+500. Reporta lo que falle sin arreglar nada todavía.
 ```
 
-**Esto es lo que más corrigió el trabajo.** Compiló a la primera, pero al
-probarlo aparecieron dos cosas que ningún repaso de código habría mostrado:
+Compiló a la primera, pero levantarlo mostró dos cosas que ninguna revisión
+de código habría encontrado:
 
-| Lo que apareció al correrlo | Qué se hizo |
+| Hallazgo | Decisión |
 |---|---|
-| **El desplegable salía vacío.** `linea_investigacion` no tiene semillas en el script del profesor, así que `GET /api/linea-investigacion` respondía **204** y el `<select>` solo ofrecía «(ninguna)» | Se agregaron cuatro líneas de ejemplo en `db/v2/v2_semillas_linea_investigacion.sql`, **marcadas como provisionales** hasta cargar las del Excel. Sin ellas el **criterio 5 no se puede ni mirar** |
-| **La pantalla dijo «El servicio no está disponible».** | **No se arregló nada**, y esa fue la decisión correcta: era el front arrancando antes que la API. Al recargar, funcionaba. Cambiar código por un error que no existe es la forma más rápida de romper algo que andaba bien |
+| `GET /api/linea-investigacion` respondía **204**: la tabla no tiene datos de referencia en el script, así que el desplegable quedaba vacío y el criterio 5 no era verificable | Se agregaron cuatro líneas de ejemplo en `db/v2/v2_semillas_linea_investigacion.sql`, marcadas como provisionales hasta cargar las del Excel |
+| La pantalla mostró «El servicio no está disponible» | **No se modificó nada.** Era el front consultando la API durante el arranque; al recargar funcionaba. Cambiar código por un síntoma transitorio es la forma más rápida de romper lo que ya servía |
 
-Y una comprobación que sí valió la pena hacer **por la interfaz** y no por
-consola: al guardar un docente con una cédula ya retirada, la pantalla
-respondió **«Ya existe un docente con esa clave.»** — el 409 viajando desde el
-motor hasta el usuario, en castellano. Eso confirmó los criterios 7 y 11 de una
-sola vez.
+Y una comprobación hecha deliberadamente **por la interfaz** y no por
+consola: al intentar registrar una cédula ya retirada, la pantalla respondió
+«Ya existe un docente con esa clave». Eso valida los criterios 7 y 11 a la
+vez — el 409 llegando desde el motor hasta el usuario, en castellano.
 
 ---
 
-## 5. Prompt 4 — la corrección más útil de todas: quitar
+## 5. Prompt 4 — recortar el repositorio a los entregables
 
 ```text
-Concéntrate en el spec kit y el código. La mayoría de cosas que creaste
-como ProyectosDeAula y eso no importa. Estás metiendo cosas innecesarias.
+Revisa qué hay en el repositorio contra la lista de entregables de
+VERSION_2.md §11. Todo lo que no sea uno de los siete entregables sale:
+material del curso heredado del ejemplo, documentos de apoyo y borradores.
+Dime además qué entregable falta.
 ```
 
-La IA había dejado en el repositorio el material del curso que venía en el
-ejemplo (`ProyectosDeAula/`, el manual de marca, los logos, el `PLAN_V1.md`) y
-documentos de apoyo que **no son entregables**.
+En el repositorio habían quedado el material del curso que venía en el
+ejemplo (`ProyectosDeAula/`, el manual de marca, los logos, `PLAN_V1.md`) y
+documentos de apoyo que no son entregables. Al recortarlo apareció lo que
+faltaba: **la colección de Postman de la v2**, que sí es entregable.
 
-**Qué se le pidió:** dejar exactamente los siete entregables de
-`VERSION_2.md` §11 y nada más. Al hacerlo apareció lo que de verdad faltaba:
-**la colección de Postman de la v2**, que es entregable y no existía.
-
-> **Por qué esta corrección vale más que las otras:** la IA tiende a **agregar**.
-> Nunca propone quitar. Decidir qué sobra es del autor, y es lo que deja un
-> repositorio donde el profesor encuentra lo que va a calificar sin buscarlo.
+> **Esta corrección es la más valiosa de las cuatro**, y conviene decir por
+> qué: una IA propone agregar, nunca quitar. Decidir qué sobra es del autor,
+> y es lo que deja un repositorio donde el evaluador encuentra lo que va a
+> calificar sin tener que buscarlo.
 
 ---
 
-## 6. Lo que NO se le delegó a la IA, y por qué
+## 6. Prompt 5 — reorganización en capas
 
-| | |
+```text
+Reorganiza el backend en cuatro proyectos —Domain, Application,
+Infrastructure y Api— más uno de pruebas, con estas referencias:
+
+  Api -> Application -> Domain <- Infrastructure
+  Api -> Infrastructure, solo para el registro en Program.cs
+
+Domain no referencia a nada. Application no referencia a Infrastructure.
+El proyecto de pruebas referencia a Application y Domain, no a
+Infrastructure.
+
+Los repositorios reciben la cadena de conexión como string, no
+IConfiguration: la capa de datos no debe saber que existe un appsettings.
+
+Al terminar: compilar, levantar y volver a correr las pruebas de humo y las
+de capas.
+```
+
+**Qué cambia esto respecto de tener carpetas.** Con carpetas, «el servicio no
+toca SQL» es un acuerdo. Con proyectos es una referencia que no existe: el
+compilador lo impide. Esa es la razón de la reorganización, y es lo que se
+sustenta.
+
+### Correcciones
+
+| Lo generado | Problema | Corrección aplicada |
+|---|---|---|
+| Al mover los archivos, las clases de Infrastructure perdieron el `using` de los contratos | No compilaba: cinco errores de tipo no encontrado | Se agregó `using …Domain.Contratos` en los cuatro archivos y se recompiló antes de dar nada por hecho |
+| Las interfaces `IRepositorioLineaInvestigacion` e `IServicioLineaInvestigacion` quedaron declaradas dentro del archivo de su implementación | Un contrato que vive dentro de su implementación no es un contrato | Se separaron a `Domain/Contratos/` y `Application/Contratos/` |
+
+---
+
+## 7. Lo que no se delegó
+
+| | Por qué |
 |---|---|
-| **Las decisiones D1–D6 del `2_spec.md`** | La IA las habría «asumido» y seguido. La ambigüedad se marca, no se rellena. La D2 —si se puede retirar un maestro con detalle activo— es una regla de negocio, no un detalle de implementación |
+| **Las decisiones D1–D6 del `2_spec.md`** | Son del dominio. La D2 —si se puede retirar un maestro con detalle activo— es una regla de negocio, no un detalle de implementación |
 | **Qué sobra en el repositorio** | Ver §5 |
-| **Marcar el `9_checklist.md`** | Una IA puede ayudar a evaluar; no puede auto-aprobarse |
+| **La firma del `9_checklist.md`** | Una IA puede ayudar a evaluar; no puede auto-aprobarse |
 | **Esta guía** | Si la escribiera la IA, el eslabón del medio sería inventado |
 
 ---
 
-## 7. Registro de ambigüedades que la IA intentó rellenar
+## 8. Ambigüedades detectadas y dónde se resolvieron
 
-> Cada «asumo que…» se paró, y la respuesta quedó **en la spec**. El chat se
-> cierra; la spec queda.
-
-| Lo que la IA asumió | Dónde quedó la respuesta |
+| Lo que la IA propuso asumir | Dónde quedó la decisión |
 |---|---|
-| «Asumo que al retirar un docente se retiran sus estudios» | Decisión **D3**: **no** hay cascada lógica → 409 |
-| «Asumo que el id de `estudios_realizados` es autoincremental» | Aclaración **A3**: no lo es; lo asigna el procedimiento |
-| «Por defecto respondo 500 si la base rechaza» | `6_contracts.md` §3.3: los errores de integridad son **409** |
-| «Corrijo `experiecia` a `experiencia`» | **ADR-07**: no se renombra la tabla del esquema dado; lo que se corrige es el texto de la pantalla |
+| Que al retirar un docente se retire su detalle en cascada | Decisión **D3**: no hay cascada; se responde 409 |
+| Que el id de `estudios_realizados` fuera autoincremental | Aclaración **A3**: no lo es; lo asigna el procedimiento |
+| Responder 500 ante un rechazo de la base | `6_contracts.md` §3.3: los errores de integridad son **409** |
+| Corregir `experiecia` a `experiencia` | **ADR-07**: el nombre viene del esquema dado y no se renombra; se corrige el texto de la pantalla |
 
 ---
 
-## 8. Para completar antes de entregar
+## 9. Pendiente antes de la entrega final
 
-- [ ] Poner el nombre del autor en el encabezado.
-- [ ] Agregar los prompts de las fases que falten (2 a 6), con la misma
-      estructura: **el prompt, y qué hubo que corregirle**.
-- [ ] Si en alguna se usó el **chat** además del IDE agéntico, dejar los dos:
-      la metodología pide las dos modalidades.
+- [ ] Nombre del autor en el encabezado.
+- [ ] Prompts de las fases 2 a 6, con la misma estructura: el prompt y su corrección.
+- [ ] Si se usa también la modalidad de chat, dejar las dos.
