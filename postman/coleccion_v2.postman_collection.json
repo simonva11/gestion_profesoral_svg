@@ -1,0 +1,208 @@
+{
+  "info": {
+    "name": "Gestión Profesoral — v2 (docente)",
+    "description": "Las peticiones de la versión 2. La carpeta «Deben fallar» NO es opcional: un criterio solo está probado si se probó el desenlace malo (VERSION_2.md §8, criterio 7).\n\nOrden: córrala de arriba abajo con el Runner sobre una base recién levantada.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:8074" },
+    { "key": "cedula", "value": "1017245" }
+  ],
+  "item": [
+    {
+      "name": "0 · Diagnóstico",
+      "item": [
+        {
+          "name": "GET / — la API responde",
+          "request": { "method": "GET", "url": "{{base}}/" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200: la API está arriba', () => pm.response.to.have.status(200));",
+            "pm.test('dice que es la v2', () => pm.expect(pm.response.json().version).to.eql('v2'));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "1 · El desplegable de la clave foránea (criterio 5)",
+      "item": [
+        {
+          "name": "GET /api/linea-investigacion — opciones con NOMBRE",
+          "request": { "method": "GET", "url": "{{base}}/api/linea-investigacion" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 con el sobre del contrato', () => pm.response.to.have.status(200));",
+            "const s = pm.response.json();",
+            "pm.test('viene el sobre {tabla, limite, total, datos}', () => {",
+            "  pm.expect(s).to.have.all.keys('tabla','limite','total','datos');",
+            "});",
+            "pm.test('el desplegable NO sale vacío', () => pm.expect(s.total).to.be.above(0));",
+            "pm.test('cada opción trae nombre (lo que se lee) e id (lo que viaja)', () => {",
+            "  pm.expect(s.datos[0]).to.have.property('nombre');",
+            "  pm.expect(s.datos[0]).to.have.property('id');",
+            "});"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "2 · El camino feliz de docente",
+      "item": [
+        {
+          "name": "GET /api/docente — listar",
+          "request": { "method": "GET", "url": "{{base}}/api/docente?limite=1000" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 con filas, o 204 si no hay ninguna (vacío NO es error)', () => {",
+            "  pm.expect([200,204]).to.include(pm.response.code);",
+            "});"
+          ] } }]
+        },
+        {
+          "name": "POST /api/docente — crear con «(ninguna)» → null (criterio 6)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base}}/api/docente",
+            "body": { "mode": "raw", "raw": "{\n  \"cedula\": {{cedula}},\n  \"nombres\": \"Ana\",\n  \"apellidos\": \"Torres Gomez\",\n  \"genero\": \"Femenino\",\n  \"cargo\": \"Titular\",\n  \"fechaNacimiento\": \"1980-04-12\",\n  \"correo\": \"ana.torres@umv.edu.co\",\n  \"telefono\": \"3001234567\",\n  \"urlCvlac\": \"https://cvlac.minciencias.gov.co/ana\",\n  \"fechaActualizacion\": \"2026-01-30\",\n  \"escalafon\": \"Asociado\",\n  \"perfil\": \"Doctora en Ingenieria de Sistemas\",\n  \"convMinciencia\": \"2023\",\n  \"nacionalidaad\": \"Colombiana\",\n  \"lineaInvestigacionPrincipal\": null\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200: el docente queda registrado', () => pm.response.to.have.status(200));",
+            "const d = pm.response.json().datos;",
+            "pm.test('la línea quedó en null, no en 0 ni en cadena vacía', () => {",
+            "  pm.expect(d.lineaInvestigacionPrincipal).to.eql(null);",
+            "});",
+            "pm.test('devuelve la fila COMO QUEDÓ GUARDADA: el contador lo puso la base', () => {",
+            "  pm.expect(d.totalEstudios).to.eql(0);",
+            "});",
+            "pm.test('activo NO viaja: es detalle del motor', () => {",
+            "  pm.expect(d).to.not.have.property('activo');",
+            "});"
+          ] } }]
+        },
+        {
+          "name": "GET /api/docente/{cedula} — consultar",
+          "request": { "method": "GET", "url": "{{base}}/api/docente/{{cedula}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));",
+            "pm.test('la fecha viaja sin hora', () => pm.expect(pm.response.json().fechaNacimiento).to.eql('1980-04-12'));"
+          ] } }]
+        },
+        {
+          "name": "PATCH /api/docente/{cedula} — cambiar solo un campo",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base}}/api/docente/{{cedula}}",
+            "body": { "mode": "raw", "raw": "{ \"cargo\": \"Emerito\" }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 y una fila afectada', () => {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(pm.response.json().filasAfectadas).to.eql(1);",
+            "});"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "3 · DEBEN FALLAR — y así es como se prueban los criterios",
+      "item": [
+        {
+          "name": "409 · cédula repetida (criterio 7) — NO 500",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base}}/api/docente",
+            "body": { "mode": "raw", "raw": "{\n  \"cedula\": {{cedula}},\n  \"nombres\": \"Ana\",\n  \"apellidos\": \"Torres Gomez\",\n  \"genero\": \"Femenino\",\n  \"cargo\": \"Titular\",\n  \"fechaNacimiento\": \"1980-04-12\",\n  \"correo\": \"ana.torres@umv.edu.co\",\n  \"telefono\": \"3001234567\",\n  \"urlCvlac\": \"https://cvlac.minciencias.gov.co/ana\",\n  \"fechaActualizacion\": \"2026-01-30\",\n  \"escalafon\": \"Asociado\",\n  \"perfil\": \"Doctora\",\n  \"convMinciencia\": \"2023\",\n  \"nacionalidaad\": \"Colombiana\",\n  \"lineaInvestigacionPrincipal\": null\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('409, y un 500 sería criterio FALLADO', () => pm.response.to.have.status(409));",
+            "pm.test('el mensaje está en castellano y sin jerga', () => {",
+            "  const m = pm.response.json().mensaje;",
+            "  pm.expect(m).to.be.a('string').and.not.match(/constraint|FOREIGN KEY|PRIMARY KEY/i);",
+            "});"
+          ] } }]
+        },
+        {
+          "name": "409 · clave foránea inexistente (criterio 7)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base}}/api/docente",
+            "body": { "mode": "raw", "raw": "{\n  \"cedula\": 1098332,\n  \"nombres\": \"Carlos\",\n  \"apellidos\": \"Perez Mejia\",\n  \"genero\": \"Masculino\",\n  \"cargo\": \"Asistente\",\n  \"fechaNacimiento\": \"1985-07-03\",\n  \"correo\": \"carlos.perez@umv.edu.co\",\n  \"telefono\": \"3019876543\",\n  \"urlCvlac\": \"https://cvlac.minciencias.gov.co/carlos\",\n  \"fechaActualizacion\": \"2026-02-10\",\n  \"escalafon\": \"Asistente\",\n  \"perfil\": \"Magister\",\n  \"convMinciencia\": \"2024\",\n  \"nacionalidaad\": \"Colombiana\",\n  \"lineaInvestigacionPrincipal\": 987654\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('409: la línea que indicó no existe', () => pm.response.to.have.status(409));"
+          ] } }]
+        },
+        {
+          "name": "422 · cuerpo incompleto, con errores[]",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base}}/api/docente",
+            "body": { "mode": "raw", "raw": "{ \"cedula\": 99 }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('422: la FORMA del cuerpo está mal', () => pm.response.to.have.status(422));",
+            "pm.test('errores[] dice qué campo falta', () => {",
+            "  pm.expect(pm.response.json().errores).to.be.an('array').that.is.not.empty;",
+            "});"
+          ] } }]
+        },
+        {
+          "name": "404 · cédula inexistente",
+          "request": { "method": "GET", "url": "{{base}}/api/docente/999999" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('404', () => pm.response.to.have.status(404));"
+          ] } }]
+        },
+        {
+          "name": "400 · limite = 0 (regla rota, no forma)",
+          "request": { "method": "GET", "url": "{{base}}/api/docente?limite=0" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('400 y no 422: el dato SÍ es un entero', () => pm.response.to.have.status(400));"
+          ] } }]
+        },
+        {
+          "name": "400 · PATCH sin campos",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base}}/api/docente/{{cedula}}",
+            "body": { "mode": "raw", "raw": "{}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('400 y no 404: el docente existe, lo que falta es qué cambiar', () => pm.response.to.have.status(400));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "4 · El borrado lógico (criterio 10)",
+      "item": [
+        {
+          "name": "DELETE /api/docente/{cedula} — retirar",
+          "request": { "method": "DELETE", "url": "{{base}}/api/docente/{{cedula}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200: queda retirado (UPDATE activo = 0, no DELETE)', () => pm.response.to.have.status(200));"
+          ] } }]
+        },
+        {
+          "name": "GET /api/docente/{cedula} — el retirado responde 404",
+          "request": { "method": "GET", "url": "{{base}}/api/docente/{{cedula}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('404: para la API ya no existe — pero la fila SIGUE en la base', () => {",
+            "  pm.response.to.have.status(404);",
+            "});"
+          ] } }]
+        },
+        {
+          "name": "DELETE otra vez — 404",
+          "request": { "method": "DELETE", "url": "{{base}}/api/docente/{{cedula}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('404: no se puede retirar lo que ya estaba retirado', () => pm.response.to.have.status(404));"
+          ] } }]
+        }
+      ]
+    }
+  ]
+}
