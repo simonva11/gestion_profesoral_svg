@@ -46,19 +46,19 @@
 |---|---|---|---|
 | C1 | ¿Los dos repositorios son **privados** y `ccastro2050` es colaborador? | ☐ | |
 | C2 | ¿**Ningún** commit directo a `main`? | ☐ | |
-| C3 | ¿Cada integrante tiene **su rama** con commits propios, frecuentes y descriptivos? | ☐ | |
-| C4 | ¿Todo entró por **Pull Request**, y el merge lo hizo **solo** el encargado? | ☐ | |
+| C3 | ¿El trabajo va en **su rama** (`rama-<nombre>`), con commits frecuentes y descriptivos? | ☐ | |
+| C4 | ¿Todo entró a `main` por **Pull Request**, aunque el autor y quien integra sean la misma persona? | ☐ | |
 | C5 | ¿Hay **cero secretos** en el código? ¿Existe `.env.example` y el `.env` está en `.gitignore`? | ☐ | |
-| C6 | ¿Está la `GUIA_IA2.md` con **los prompts reales de cada integrante**, con nombre? | ☐ | |
+| C6 | ¿Está la `GUIA_IA2.md` con **los prompts que de verdad se usaron**? | ☐ | |
 | C7 | ¿Los prompts incluyen **lo que hubo que corregirle a la IA**? | ☐ | |
 | C8 | ¿El tag `v2` está sobre el commit que pasa los doce criterios? | ☐ | |
 
 ## D. Interpretabilidad *(4 de los 20 puntos — individual)*
 
-> Esta sección **no la marca el equipo por el equipo**: cada quien la marca
-> por sí mismo, y es la única parte de la nota que no se puede delegar.
+> Es la única parte de la nota que no se puede delegar — y trabajando solo,
+> tampoco hay con quién repartirla: son todos los archivos.
 
-| | Cada integrante, sobre **sus** archivos | ✔ |
+| | Sobre **cada** archivo del repositorio | ✔ |
 |---|---|---|
 | D1 | ¿Puedo contar **qué hace** cada archivo mío sin leerlo línea por línea? | ☐ |
 | D2 | ¿Puedo decir **por qué así y no de la otra manera**, con lo que se gana y lo que se pierde? | ☐ |

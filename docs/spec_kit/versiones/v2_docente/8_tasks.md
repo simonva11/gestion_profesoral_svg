@@ -103,19 +103,31 @@ las dos claves en la ruta y no tienen editar.**
 | 6.5 | README con el quickstart de la v2 |
 | 6.6 | PR final a `main` + **tag `v2`** |
 
-## 3. Reparto por integrante (y es lo que se sustenta)
+## 3. El reparto: un solo autor, y por eso el orden importa más
 
-> Cada quien responde por **su rama** y por **sus archivos**. La columna de
-> la derecha es lo que le van a pedir que explique en voz alta.
+> **Este proyecto lo desarrolla una sola persona.** No hay reparto que hacer,
+> así que lo que queda de esta sección no es «quién hace qué» sino **en qué
+> orden se hace**, que con un solo par de manos es lo único que evita trabajar
+> dos veces.
 
-| Integrante | Rama | Fases | Lo que tiene que poder contar |
-|---|---|---|---|
-| **Integrante A** *(encargado del main)* | `rama-<nombre>` | 0 y 6 | Por qué el SQL se mudó a la base; por qué la constitución se enmendó en vez de «dejarlo pasar» |
-| **Integrante B** | `rama-<nombre>` | 1 | El desplegable con «(ninguna)» → `null`; por qué `null` no es cadena vacía |
-| **Integrante C** | `rama-<nombre>` | 2 | El disparador y la transacción: por qué escucha el `UPDATE` y qué pasa si el tercer renglón falla |
-| **Integrante D** | `rama-<nombre>` | 3 y 5 | Maestro-detalle en una pantalla; por qué el detalle no tiene pantalla propia |
-| **Integrante E** | `rama-<nombre>` | 4 | Por qué una tabla puente no se edita; de dónde sale el 409 de la pareja repetida |
+Las fases van **en el orden del diagrama de arriba**, y cada una se cierra con
+su «Verificar» antes de empezar la siguiente. Saltarse ese orden sí tiene
+costo: la fase 4 (tablas puente) necesita que los dos padres existan, y los
+desplegables de la fase 1 necesitan que los catálogos de la v1 estén cargados.
 
-**Nadie entrega una fase que no pueda explicar.** Si la IA la escribió y el
-integrante no la entendió, todavía no está entregada: está pegada
-(metodología §2.2).
+**Y lo que se sustenta es todo**, porque todo es de uno: por cada archivo hay
+que poder contestar qué hace, por qué así, qué pasa si falla y qué cambiaría.
+Lo que en un equipo se reparte, aquí se acumula — conviene cerrar cada fase
+entendiéndola, y no dejar la comprensión para el final.
+
+| Fase | Lo que hay que poder contar de ella |
+|---|---|
+| **0** | Por qué el SQL se mudó a la base, y por qué la constitución se enmendó en vez de «dejarlo pasar por esta vez» |
+| **1** | El desplegable con «(ninguna)» → `null`, y por qué `null` no es cadena vacía ni cero |
+| **2** | El disparador y la transacción: por qué escucha el `UPDATE` y qué queda guardado si el tercer renglón falla |
+| **3 y 5** | Maestro-detalle en una sola pantalla: por qué el detalle no tiene pantalla propia |
+| **4** | Por qué una tabla puente no se edita, y de dónde sale el 409 de la pareja repetida |
+| **6** | Qué comprueba cada uno de los doce criterios, y cuál es el que más se cae |
+
+**Nada se entrega sin poder explicarlo.** Si la IA lo escribió y usted no lo
+entendió, todavía no está entregado: está pegado (0_METODOLOGIA.md §2.2).

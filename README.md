@@ -14,7 +14,7 @@ de la v2** (VERSION_2.md §11) y nada más.
 | **El código** — repositorios que **llaman** a los procedimientos | [`api_gestion/`](api_gestion/) | ⚠️ `docente` completo; `programa` (v1) todavía con SQL a mano |
 | **La interfaz gráfica** | [`front_blazor/`](front_blazor/) | ⚠️ pantalla de `docente`; falta la ficha maestro-detalle |
 | **La colección de pruebas**, con las que **tienen que fallar** | [`postman/coleccion_v2.postman_collection.json`](postman/) · y [`pruebas_humo/humo_docente_v2.sh`](pruebas_humo/) | ✅ 15 peticiones, 6 de ellas deben fallar |
-| **Los prompts**, con lo que hubo que corregirle a la IA | [`docs/spec_kit/versiones/v2_docente/GUIA_IA2.md`](docs/spec_kit/versiones/v2_docente/GUIA_IA2.md) | ⚠️ plantilla lista, falta llenarla cada integrante |
+| **Los prompts**, con lo que hubo que corregirle a la IA | [`docs/spec_kit/versiones/v2_docente/GUIA_IA2.md`](docs/spec_kit/versiones/v2_docente/GUIA_IA2.md) | ✅ los cuatro prompts reales y sus correcciones |
 | **El tag `v2`** sobre el commit que pasa los doce criterios | — | ⬜ pendiente: faltan criterios |
 
 ---
@@ -32,7 +32,7 @@ de la v2** (VERSION_2.md §11) y nada más.
 | [`5_data_model.md`](docs/spec_kit/versiones/v2_docente/5_data_model.md) | Las 11 tablas y **quién escribe cada columna** |
 | [**`6_contracts.md`**](docs/spec_kit/versiones/v2_docente/6_contracts.md) | **Los endpoints** y las **secuencias de error**: 404, 422 y los dos 409 |
 | [`7_quickstart.md`](docs/spec_kit/versiones/v2_docente/7_quickstart.md) | Cómo se comprueba cada criterio |
-| [`8_tasks.md`](docs/spec_kit/versiones/v2_docente/8_tasks.md) | Las fases con compuertas y el reparto por integrante |
+| [`8_tasks.md`](docs/spec_kit/versiones/v2_docente/8_tasks.md) | Las fases con sus compuertas y el orden en que se hacen |
 | [`9_checklist.md`](docs/spec_kit/versiones/v2_docente/9_checklist.md) | La compuerta 3, que firma una persona |
 | [`GUIA_IA2.md`](docs/spec_kit/versiones/v2_docente/GUIA_IA2.md) | Los prompts y sus correcciones |
 
@@ -98,8 +98,7 @@ Hoy faltan:
    tiene SQL escrito a mano, y eso deja el **criterio 3 en rojo**.
 2. Los **procedimientos y las rebanadas** de las 10 tablas restantes de la v2.
 3. La **ficha maestro-detalle** y el alta por lote (criterio 9).
-4. Llenar la **`GUIA_IA2.md`** con los prompts reales de cada integrante.
-5. Firmar el **`9_checklist.md`** y poner el **tag `v2`**.
+4. Firmar el **`9_checklist.md`** y poner el **tag `v2`**.
 
 El orden y el reparto están en [`8_tasks.md`](docs/spec_kit/versiones/v2_docente/8_tasks.md).
 
@@ -107,8 +106,9 @@ El orden y el reparto están en [`8_tasks.md`](docs/spec_kit/versiones/v2_docent
 
 ## Cómo se trabaja
 
-Nadie trabaja en `main`: cada integrante en su `rama-<nombre>`, todo entra por
-**Pull Request** y el merge lo hace solo el encargado. Commits pequeños y
+**Este proyecto lo desarrolla una sola persona.** Aun así se respeta la regla:
+nadie trabaja en `main` — el trabajo va en `rama-simon` y entra por **Pull
+Request**, aunque el autor y quien integra sean el mismo. Commits pequeños y
 descriptivos en castellano. Los secretos van por variable de entorno: copie
 `.env.example` a `.env`, que no se sube.
 
